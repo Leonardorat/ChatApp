@@ -9,11 +9,13 @@
         <include .../>
         <exclude .../>
         -->
+        <exclude domain="database" path="chatmail.db" />
+        <exclude domain="sharedpref" path="auth_state.xml" />
     </cloud-backup>
-    <!--
+
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="database" path="chatmail.db" />
+        <exclude domain="sharedpref" path="auth_state.xml" />
     </device-transfer>
-    -->
+
 </data-extraction-rules>
