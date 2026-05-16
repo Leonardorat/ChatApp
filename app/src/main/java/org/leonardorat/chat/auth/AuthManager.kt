@@ -26,10 +26,10 @@ class AuthManager(
             AuthConfig.REDIRECT_URI
         )
             .setScope(AuthConfig.SCOPES.joinToString(" "))
+            .setPrompt("select_account consent")
             .setAdditionalParameters(
                 mapOf(
-                    "access_type" to "offline",
-                    "prompt" to "select_account consent"
+                    "access_type" to "offline"
                 )
             )
             .build()

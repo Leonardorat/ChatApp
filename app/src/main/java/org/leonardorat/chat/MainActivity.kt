@@ -24,7 +24,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        authManager = AuthManager(this)
+        val tokenStorage = TokenStorage(this)
+
+        authManager = AuthManager(
+            context = this,
+            tokenStorage = tokenStorage
+        )
         gmailService = GmailService(authManager)
 
         val db = AppDatabase.get(this)
@@ -48,6 +53,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChatTheme {
                 AppNavHost(
+                    authManager = authManager,
                     profileRepository = profileRepository,
                     roomRepository = roomRepository,
                     messageRepository = messageRepository
