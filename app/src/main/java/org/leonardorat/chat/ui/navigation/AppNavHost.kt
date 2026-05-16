@@ -63,7 +63,7 @@ fun AppNavHost(
                 }
             }
 
-            androidx.compose.material3.Text("Проверяем авторизацию...")
+            androidx.compose.material3.Text("checking auth")
         }
 
         composable(Routes.AUTH) {
@@ -83,7 +83,7 @@ fun AppNavHost(
                 onSaveProfile = { name ->
                     scope.launch {
                         try {
-                            status = "Создаём профиль..."
+                            status = "creating profile..."
                             profileRepository.createProfile(name)
                             status = ""
 
@@ -96,7 +96,7 @@ fun AppNavHost(
                                 popUpTo(Routes.PROFILE) { inclusive = true }
                             }
                         } catch (e: Exception) {
-                            status = "Ошибка: ${e::class.simpleName}: ${e.message}"
+                            status = "error: ${e::class.simpleName}: ${e.message}"
                         }
                     }
                 }
@@ -116,14 +116,14 @@ fun AppNavHost(
                 onRefreshClick = {
                     scope.launch {
                         try {
-                            status = "Обновляем..."
+                            status = "updating..."
                             messageRepository.syncLatestMessages()
-                            status = "Обновлено"
+                            status = "updated"
                         } catch (e: AuthorizationRequiredException) {
                             status = ""
                             navController.navigate(Routes.AUTH)
                         } catch (e: Exception) {
-                            status = "Ошибка: ${e::class.simpleName}: ${e.message}"
+                            status = "error: ${e::class.simpleName}: ${e.message}"
                         }
                     }
                 }
@@ -136,7 +136,7 @@ fun AppNavHost(
                 onCreate = { name, email ->
                     scope.launch {
                         try {
-                            status = "Создаём чат..."
+                            status = "creating chat..."
                             val roomId = roomRepository.createRoom(name, email)
                             status = ""
 
@@ -144,7 +144,7 @@ fun AppNavHost(
                                 popUpTo(Routes.ROOMS)
                             }
                         } catch (e: Exception) {
-                            status = "Ошибка: ${e::class.simpleName}: ${e.message}"
+                            status = "error: ${e::class.simpleName}: ${e.message}"
                         }
                     }
                 }
@@ -160,7 +160,7 @@ fun AppNavHost(
             val roomId = entry.arguments?.getString("roomId")
                 ?: error("roomId is missing")
 
-            var roomTitle by remember(roomId) { mutableStateOf("Чат") }
+            var roomTitle by remember(roomId) { mutableStateOf("chat") }
 
             LaunchedEffect(roomId) {
                 roomTitle = roomRepository.getRoom(roomId).displayName
@@ -177,14 +177,14 @@ fun AppNavHost(
                 onSend = { text ->
                     scope.launch {
                         try {
-                            status = "Отправляем..."
+                            status = "sending..."
                             messageRepository.sendMessage(roomId, text)
-                            status = "Отправлено"
+                            status = "sent"
                         } catch (e: AuthorizationRequiredException) {
                             status = ""
                             navController.navigate(Routes.AUTH)
                         } catch (e: Exception) {
-                            status = "Ошибка: ${e::class.simpleName}: ${e.message}"
+                            status = "error: ${e::class.simpleName}: ${e.message}"
                         }
                     }
                 }

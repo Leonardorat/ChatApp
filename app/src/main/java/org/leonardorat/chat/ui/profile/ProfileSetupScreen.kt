@@ -19,7 +19,7 @@ fun ProfileSetupScreen(
     var name by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Создание профиля")
+        Text("creating profile")
         Text(status)
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -27,7 +27,7 @@ fun ProfileSetupScreen(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Ваше имя") }
+            label = { Text("your name") }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -39,7 +39,7 @@ fun ProfileSetupScreen(
                 }
             }
         ) {
-            Text("Продолжить")
+            Text("continue")
         }
     }
 }

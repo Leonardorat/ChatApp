@@ -24,18 +24,18 @@ fun ChatListScreen(
     onRefreshClick: () -> Unit
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Чаты")
+        Text("chats")
         Text(status)
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Row {
             Button(onClick = onCreateRoomClick) {
-                Text("Создать чат")
+                Text("create chat")
             }
 
             Button(onClick = onRefreshClick) {
-                Text("Обновить")
+                Text("update")
             }
         }
 
@@ -51,7 +51,7 @@ fun ChatListScreen(
                     Text(room.displayName)
                     Text(room.peerEmail)
                     if (room.lastMessageText != null) {
-                        Text("Последнее: ${room.lastMessageText}")
+                        Text("last message: ${room.lastMessageText}")
                     }
                 }
             }

@@ -35,7 +35,7 @@ fun ChatScreen(
         ) {
             items(messages) { message ->
                 val author = if (message.direction == MessageDirection.OUTGOING) {
-                    "Вы"
+                    "You"
                 } else {
                     message.fromEmail
                 }
@@ -48,7 +48,7 @@ fun ChatScreen(
         OutlinedTextField(
             value = input,
             onValueChange = { input = it },
-            label = { Text("Сообщение") }
+            label = { Text("message") }
         )
 
         Button(
@@ -59,7 +59,7 @@ fun ChatScreen(
                 }
             }
         ) {
-            Text("Отправить")
+            Text("send")
         }
     }
 }
