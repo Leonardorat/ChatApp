@@ -17,7 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        manifestPlaceholders["appAuthRedirectScheme"] = "-"
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.googleusercontent.apps.611850287327-5probc8bsk4hteug2t3ij01pg2fdmdd0"
     }
 
     buildTypes {

@@ -7,17 +7,21 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import org.leonardorat.chat.auth.AuthManager
+import org.leonardorat.chat.auth.AuthorizationRequiredException
 import org.leonardorat.chat.messages.MessageRepository
 import org.leonardorat.chat.profile.ProfileRepository
 import org.leonardorat.chat.rooms.RoomRepository
+import org.leonardorat.chat.ui.auth.AuthScreen
 import org.leonardorat.chat.ui.chat.ChatScreen
 import org.leonardorat.chat.ui.profile.ProfileSetupScreen
 import org.leonardorat.chat.ui.rooms.ChatListScreen
 import org.leonardorat.chat.ui.rooms.CreateRoomScreen
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavHost(
+    authManager: AuthManager,
     profileRepository: ProfileRepository,
     roomRepository: RoomRepository,
     messageRepository: MessageRepository
@@ -27,24 +31,52 @@ fun AppNavHost(
 
     var status by remember { mutableStateOf("") }
 
-    val profile by profileRepository
-        .observeProfile()
-        .collectAsStateWithLifecycle(initialValue = null)
-
     val rooms by roomRepository
         .observeRooms()
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
-    val startDestination = if (profile == null) {
-        Routes.PROFILE
-    } else {
-        Routes.ROOMS
-    }
-
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Routes.AUTH_CHECK
     ) {
+        composable(Routes.AUTH_CHECK) {
+            LaunchedEffect(Unit) {
+                val isAuthorized = authManager.ensureAuthorized()
+
+                if (!isAuthorized) {
+                    navController.navigate(Routes.AUTH) {
+                        popUpTo(Routes.AUTH_CHECK) { inclusive = true }
+                    }
+                    return@LaunchedEffect
+                }
+
+                val profile = profileRepository.getProfile()
+
+                if (profile == null) {
+                    navController.navigate(Routes.PROFILE) {
+                        popUpTo(Routes.AUTH_CHECK) { inclusive = true }
+                    }
+                } else {
+                    navController.navigate(Routes.ROOMS) {
+                        popUpTo(Routes.AUTH_CHECK) { inclusive = true }
+                    }
+                }
+            }
+
+            androidx.compose.material3.Text("Проверяем авторизацию...")
+        }
+
+        composable(Routes.AUTH) {
+            AuthScreen(
+                authManager = authManager,
+                onAuthSuccess = {
+                    navController.navigate(Routes.AUTH_CHECK) {
+                        popUpTo(Routes.AUTH) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Routes.PROFILE) {
             ProfileSetupScreen(
                 status = status,
@@ -54,7 +86,13 @@ fun AppNavHost(
                             status = "Создаём профиль..."
                             profileRepository.createProfile(name)
                             status = ""
+
                             navController.navigate(Routes.ROOMS) {
+                                popUpTo(Routes.PROFILE) { inclusive = true }
+                            }
+                        } catch (e: AuthorizationRequiredException) {
+                            status = ""
+                            navController.navigate(Routes.AUTH) {
                                 popUpTo(Routes.PROFILE) { inclusive = true }
                             }
                         } catch (e: Exception) {
@@ -81,6 +119,9 @@ fun AppNavHost(
                             status = "Обновляем..."
                             messageRepository.syncLatestMessages()
                             status = "Обновлено"
+                        } catch (e: AuthorizationRequiredException) {
+                            status = ""
+                            navController.navigate(Routes.AUTH)
                         } catch (e: Exception) {
                             status = "Ошибка: ${e::class.simpleName}: ${e.message}"
                         }
@@ -98,6 +139,7 @@ fun AppNavHost(
                             status = "Создаём чат..."
                             val roomId = roomRepository.createRoom(name, email)
                             status = ""
+
                             navController.navigate(Routes.chat(roomId)) {
                                 popUpTo(Routes.ROOMS)
                             }
@@ -138,6 +180,9 @@ fun AppNavHost(
                             status = "Отправляем..."
                             messageRepository.sendMessage(roomId, text)
                             status = "Отправлено"
+                        } catch (e: AuthorizationRequiredException) {
+                            status = ""
+                            navController.navigate(Routes.AUTH)
                         } catch (e: Exception) {
                             status = "Ошибка: ${e::class.simpleName}: ${e.message}"
                         }

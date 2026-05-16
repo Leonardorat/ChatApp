@@ -2,121 +2,108 @@ package org.leonardorat.chat.auth
 
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.edit
 import kotlinx.coroutines.suspendCancellableCoroutine
-import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
 import net.openid.appauth.AuthorizationService
-import net.openid.appauth.AuthorizationServiceConfiguration
 import net.openid.appauth.ResponseTypeValues
+import net.openid.appauth.TokenResponse
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class AuthManager(
-    private val context: Context
+    context: Context,
+    private val tokenStorage: TokenStorage
 ) {
-    private val prefs =
-        context.getSharedPreferences("auth_state", Context.MODE_PRIVATE)
-
     private val authService = AuthorizationService(context)
 
-    private val serviceConfig = AuthorizationServiceConfiguration(
-        AuthConfig.AUTH_ENDPOINT,
-        AuthConfig.TOKEN_ENDPOINT
-    )
-
-    fun createAuthorizationIntent(): Intent {
+    fun createSignInIntent(): Intent {
         val request = AuthorizationRequest.Builder(
-            serviceConfig,
+            AuthConfig.SERVICE_CONFIG,
             AuthConfig.CLIENT_ID,
             ResponseTypeValues.CODE,
             AuthConfig.REDIRECT_URI
         )
-            .setScopes(AuthConfig.SCOPES)
+            .setScope(AuthConfig.SCOPES.joinToString(" "))
+            .setAdditionalParameters(
+                mapOf(
+                    "access_type" to "offline",
+                    "prompt" to "select_account consent"
+                )
+            )
             .build()
 
         return authService.getAuthorizationRequestIntent(request)
     }
 
-    fun handleAuthorizationResult(
-        data: Intent?,
-        onResult: (Boolean, String?) -> Unit
-    ) {
-        if (data == null) {
-            onResult(false, "No auth result")
-            return
-        }
-
-        val response = AuthorizationResponse.fromIntent(data)
-        val exception = AuthorizationException.fromIntent(data)
+    suspend fun handleAuthorizationResponse(intent: Intent) {
+        val response = AuthorizationResponse.fromIntent(intent)
+        val exception = AuthorizationException.fromIntent(intent)
 
         if (response == null) {
-            onResult(false, exception?.errorDescription ?: "Authorization cancelled")
-            return
+            throw AuthorizationRequiredException(
+                exception?.errorDescription ?: "Authorization response is missing"
+            )
         }
 
-        val authState = AuthState(response, exception)
+        val authState = tokenStorage.readAuthState()
+        authState.update(response, exception)
 
-        authService.performTokenRequest(
-            response.createTokenExchangeRequest()
-        ) { tokenResponse, tokenException ->
-            authState.update(tokenResponse, tokenException)
-            saveAuthState(authState)
+        val tokenRequest = response.createTokenExchangeRequest()
 
-            if (authState.isAuthorized) {
-                onResult(true, null)
-            } else {
-                onResult(false, tokenException?.errorDescription ?: "Token exchange failed")
+        val tokenResponse = suspendCancellableCoroutine<TokenResponse> { cont ->
+            authService.performTokenRequest(tokenRequest) { tokenResponse, tokenException ->
+                if (tokenResponse != null) {
+                    cont.resume(tokenResponse)
+                } else {
+                    cont.resumeWithException(
+                        AuthorizationRequiredException(
+                            tokenException?.errorDescription ?: "Token exchange failed"
+                        )
+                    )
+                }
             }
+        }
+
+        authState.update(tokenResponse, null)
+        tokenStorage.saveAuthState(authState)
+    }
+
+    suspend fun ensureAuthorized(): Boolean {
+        return try {
+            freshAccessToken()
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
     suspend fun freshAccessToken(): String {
-        val authState = readAuthState()
+        val authState = tokenStorage.readAuthState()
 
         if (!authState.isAuthorized) {
-            throw IllegalStateException("User is not authorized")
+            throw AuthorizationRequiredException()
         }
 
-        return suspendCancellableCoroutine { continuation ->
+        return suspendCancellableCoroutine { cont ->
             authState.performActionWithFreshTokens(authService) { accessToken, _, exception ->
-                saveAuthState(authState)
+                tokenStorage.saveAuthState(authState)
 
-                when {
-                    exception != null -> continuation.resumeWithException(exception)
-                    accessToken == null -> continuation.resumeWithException(
-                        IllegalStateException("Access token is null")
+                if (exception != null || accessToken.isNullOrBlank()) {
+                    cont.resumeWithException(
+                        AuthorizationRequiredException(
+                            exception?.errorDescription ?: "Unable to refresh token"
+                        )
                     )
-                    else -> continuation.resume(accessToken)
+                } else {
+                    cont.resume(accessToken)
                 }
             }
         }
     }
 
-    fun isAuthorized(): Boolean = readAuthState().isAuthorized
-
-    fun logout() {
-        prefs.edit { remove(KEY_AUTH_STATE) }
-    }
-
-    private fun saveAuthState(authState: AuthState) {
-        prefs.edit {
-            putString(KEY_AUTH_STATE, authState.jsonSerializeString())
-        }
-    }
-
-    private fun readAuthState(): AuthState {
-        val json = prefs.getString(KEY_AUTH_STATE, null)
-        return if (json != null) {
-            AuthState.jsonDeserialize(json)
-        } else {
-            AuthState()
-        }
-    }
-
-    companion object {
-        private const val KEY_AUTH_STATE = "auth_state_json"
+    fun clearAuth() {
+        tokenStorage.clear()
     }
 }

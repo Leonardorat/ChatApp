@@ -11,6 +11,7 @@ import org.leonardorat.chat.profile.ProfileRepository
 import org.leonardorat.chat.rooms.RoomRepository
 import org.leonardorat.chat.ui.navigation.AppNavHost
 import org.leonardorat.chat.ui.theme.ChatTheme
+import org.leonardorat.chat.auth.TokenStorage
 
 class MainActivity : ComponentActivity() {
 
