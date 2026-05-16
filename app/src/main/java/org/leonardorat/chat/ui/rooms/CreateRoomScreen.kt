@@ -20,7 +20,7 @@ fun CreateRoomScreen(
     var email by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Новый чат")
+        Text("new chat")
         Text(status)
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -28,13 +28,13 @@ fun CreateRoomScreen(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Имя") }
+            label = { Text("name") }
         )
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email собеседника") }
+            label = { Text("mate's email") }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -46,7 +46,7 @@ fun CreateRoomScreen(
                 }
             }
         ) {
-            Text("Создать")
+            Text("create")
         }
     }
 }
